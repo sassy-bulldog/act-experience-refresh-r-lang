@@ -3,9 +3,6 @@ name: 'Validate Commit Title'
 
 # Controls when the workflow will run
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/pr-controls.yml'
   pull_request_target:
     types:
       - opened
@@ -16,4 +13,4 @@ on:
 jobs:
   commit_title:
     name: Shared Workflow
-    uses: sassy-bulldog/.github/.github/workflows/pr-controls.yml@v0.2.0 # x-release-please-version
+    uses: sassy-bulldog/.github/.github/workflows/pr-controls.yml@v0.2.1 # x-release-please-version
