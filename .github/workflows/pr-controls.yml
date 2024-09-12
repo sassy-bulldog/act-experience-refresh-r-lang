@@ -1,0 +1,19 @@
+# Name as it appears on the Actions tab of GitHub (for current repo; this get's ignored if called from another repo)
+name: 'Validate Commit Title'
+
+# Controls when the workflow will run
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/pr-controls.yml'
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+jobs:
+  commit_title:
+    name: Shared Workflow
+    uses: sassy-bulldog/.github/.github/workflows/pr-controls.yml@v0.2.0 # x-release-please-version
