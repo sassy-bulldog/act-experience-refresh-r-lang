@@ -1,6 +1,4 @@
-# Copyright (C) 2024 actuarysailor
-# For license information, see:
-# https://github.com/actuarysailor/github-action-nodejs-local-file-copy/blob/main/LICENSE
+# This file is used to configure the PR Scope Labeler action
 💻 Source:
   - changed-files:
       - any-glob-to-any-file:
