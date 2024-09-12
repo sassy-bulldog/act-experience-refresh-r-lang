@@ -1,31 +1,22 @@
-name: Release
+# Name as it appears on the Actions tab of GitHub (for current repo; this get's ignored if called from another repo)
+name: Create Release
 
+# Controls when the workflow will run
 on:
   push:
     # Sequence of patterns matched against refs/heads
     branches:
-      - main
+      - 'releases/**'
+      - 'main'
+      - 'rc/*'
+      - 'rc'
+      - 'beta/*'
+      - 'beta'
+      - 'alpha/*'
+      - 'alpha'
 
 jobs:
   release:
-    name: 'Create Release PR 🚀'
-    runs-on: ["ubuntu-latest"]
-    steps:
-      #TODO: Deprecated NodeJS Version
-      - name: Clean Agent Workspace
-        uses: tiacsys/clean-after-action@v3.0.0
-
-      - name: Checkout
-        uses: actions/checkout@v4.1.7
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: 'Release Please 🎉'
-        uses: googleapis/release-please-action@v4.1.1
-        with:
-          token: ${{ github.token }}
-          # only needed if you want these files loaded from a branch other than the default branch
-          target-branch: main
-          manifest-file: .github/.release-please-manifest.json
-          config-file: .github/release-please-config.json
+    name: Shared Workflow
+    uses: sassy-bulldog/.github/.github/workflows/release.yml@v0.2.0 # x-release-please-version
+    secrets: inherit
