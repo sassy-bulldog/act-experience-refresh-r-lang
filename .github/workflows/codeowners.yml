@@ -4,16 +4,6 @@ name: 'Validate Code Owners'
 # Controls when the workflow will run
 on:
   push:
-    # Sequence of patterns matched against refs/heads
-    branches:
-      - 'releases/**'
-      - main
-      - rc/*
-      - rc
-      - beta/*
-      - beta
-      - alpha/*
-      - alpha
     paths:
       - '.github/workflows/codeowners.yml'
       - '**/CODEOWNERS'
