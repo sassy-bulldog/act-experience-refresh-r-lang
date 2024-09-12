@@ -56,21 +56,21 @@ experience_env$jdbc_driver <- JDBC(
 
 # Database connection details
 experience_env$db_url <- paste(
-    "jdbc:databricks://",
-    params$server_name,
-    ":",
-    params$server_port,
-    "/default",
-    ";transportMode=http",
-    ";ssl=1",
-    ";httpPath=sql/protocolv1/o/6792391718158368/0309-084038-rfhyloxf",
-    ";AuthMech=3",
-    ";EnableArrow=0",
-    ";UID=",
-    params$user_name,
-    ";PWD=",
-    params$password,
-    sep = ""
+  "jdbc:databricks://",
+  params$server_name,
+  ":",
+  params$server_port,
+  "/default",
+  ";transportMode=http",
+  ";ssl=1",
+  ";httpPath=sql/protocolv1/o/6792391718158368/0309-084038-rfhyloxf",
+  ";AuthMech=3",
+  ";EnableArrow=0",
+  ";UID=",
+  params$user_name,
+  ";PWD=",
+  params$password,
+  sep = ""
 )
 ```
 
@@ -78,15 +78,14 @@ Begin process of attempting connection to the Azure Databricks server. Server us
 
 ```{r, Connect to Databricks}
 attempt_connection <- function(
-  jdbc_driver,
-  db_url,
-  user,
-  password,
-  max_attempts = 5,
-  wait_time = 120
-) {
+    jdbc_driver,
+    db_url,
+    user,
+    password,
+    max_attempts = 5,
+    wait_time = 120) {
   for (i in 1:max_attempts) {
-    Sys.sleep(wait_time)  # wait for 2 minutes before each attempt
+    Sys.sleep(wait_time) # wait for 2 minutes before each attempt
     conn <- try(
       DBI::dbConnect(jdbc_driver, db_url, user, password),
       silent = TRUE
@@ -102,10 +101,10 @@ attempt_connection <- function(
 # Usage
 experience_env$time_begin_query <- Sys.time()
 experience_env$conn <- attempt_connection(
-    experience_env$jdbc_driver,
-    experience_env$db_url,
-    params$user_name,
-    params$password
+  experience_env$jdbc_driver,
+  experience_env$db_url,
+  params$user_name,
+  params$password
 )
 ```
 
