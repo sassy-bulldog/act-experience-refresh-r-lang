@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: 'Release Please 🎉'
-        uses: googleapis/release-please-action@v4.1.1
+        uses: googleapis/release-please-action@v4.1.3
         with:
           token: ${{ github.token }}
           # only needed if you want these files loaded from a branch other than the default branch
