@@ -1,0 +1,170 @@
+---
+title: "Refresh Experience"
+# https://bookdown.org/yihui/rmarkdown-cookbook/update-date.html
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+editor_options:
+  chunk_output_type: console
+output: html_document
+params:
+  debug: true
+  server_name: ""
+  server_port: "443"
+  user_name: ""
+  password: ""
+  source_data_table_name: ""
+  destination_database_path: ""
+  destination_database_name: ""
+  destination_data_table_name: ""
+---
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(echo = params$debug)
+# knitr::opts_knit$set(progress = TRUE, verbose = TRUE)
+print(params$debug)
+```
+
+## Extract Most Recent Experience Data
+
+### Initialize Libraries and Environment
+
+```{r, Initialize Environment}
+# Check if libraries are installed and load them
+pacman::p_load(
+  dplyr,
+  RJDBC,
+  DBI,
+  RSQLite
+)
+
+
+experience_env <- new.env()
+experience_env$time_begin <- Sys.time()
+```
+
+Define login credentials and driver
+
+```{r, Define Databricks Connection}
+# Specify the path to the JDBC driver jar file
+experience_env$jdbc_driver <- JDBC(
+  driverClass = "com.databricks.client.jdbc.Driver",
+  classPath = paste(
+    params$destination_database_path,
+    "Drivers\\databricks-jdbc-2.6.34.jar",
+    sep = ""
+  )
+)
+
+# Database connection details
+experience_env$db_url <- paste(
+    "jdbc:databricks://",
+    params$server_name,
+    ":",
+    params$server_port,
+    "/default",
+    ";transportMode=http",
+    ";ssl=1",
+    ";httpPath=sql/protocolv1/o/6792391718158368/0309-084038-rfhyloxf",
+    ";AuthMech=3",
+    ";EnableArrow=0",
+    ";UID=",
+    params$user_name,
+    ";PWD=",
+    params$password,
+    sep = ""
+)
+```
+
+Begin process of attempting connection to the Azure Databricks server. Server usually takes 5-7 minutes to initialize and return the queried data. The below function attempts connecting to the database every 2 minutes for a maximum of 5 attempts, and prints status updates during the process.
+
+```{r, Connect to Databricks}
+attempt_connection <- function(
+  jdbc_driver,
+  db_url,
+  user,
+  password,
+  max_attempts = 5,
+  wait_time = 120
+) {
+  for (i in 1:max_attempts) {
+    Sys.sleep(wait_time)  # wait for 2 minutes before each attempt
+    conn <- try(
+      DBI::dbConnect(jdbc_driver, db_url, user, password),
+      silent = TRUE
+    )
+    if (!inherits(conn, "try-error")) {
+      return(conn)
+    }
+    print(paste("Attempt", i, "failed, retrying in 2 minutes..."))
+  }
+  stop("Failed to connect after", max_attempts, "attempts.")
+}
+
+# Usage
+experience_env$time_begin_query <- Sys.time()
+experience_env$conn <- attempt_connection(
+    experience_env$jdbc_driver,
+    experience_env$db_url,
+    params$user_name,
+    params$password
+)
+```
+
+Query the Experience table through the established connection
+
+```{r, Query Source Data}
+experience_env$query <- paste0("SELECT * FROM ", params$source_data_table_name)
+experience_env$data <- dbGetQuery(experience_env$conn, experience_env$query)
+experience_env$time_end_query <- Sys.time()
+print(
+  paste(
+    "Connection to the Azure Databricks database took",
+    round(
+      experience_env$time_end_query - experience_env$time_begin_query,
+      2
+    ),
+    "minutes"
+  )
+)
+print(head(experience_env$data))
+```
+
+Prepare queried data for appending to our local SQL Database
+
+```{r, Transform Source Data to our Data Schema}
+experience_env$df_append <- experience_env$data %>%
+  rename(
+    bordereaux_month = bordereuax_month
+  ) %>%
+  mutate(
+    bordereaux_month = format(as.Date(bordereaux_month, "%m/%d/%y"), "%Y-%m-%d"),
+    v_created = format(v_created, "%Y-%m-%d"),
+    query_date = format(experience_env$time_end_query, "%Y-%m-%d %H:%M")
+  )
+
+head(experience_env$df_append)
+```
+
+Append the new data to our local SQL Database
+
+```{r, Load SQL Lite Database}
+experience_env$con <- dbConnect(
+  SQLite(),
+  dbname = paste(
+    params$destination_database_path,
+    params$destination_database_name,
+    sep = ""
+  )
+)
+
+dbWriteTable(
+  experience_env$con,
+  params$destination_data_table_name,
+  experience_env$df_append,
+  append = TRUE,
+  row.names = FALSE
+)
+
+dbDisconnect(experience_env$con)
+
+experience_env$time_end <- Sys.time()
+```
