@@ -25,10 +25,10 @@
 # *.txt @octo-org/octocats
 
 # R Files
-*.rproj             @sassy-bulldog/r-language
-*.rmd               @sassy-bulldog/r-language
-*.r                 @sassy-bulldog/r-language
-renv.lock           @sassy-bulldog/r-language
+*.[Rr][Pp][Rr][Oo][Jj]      @sassy-bulldog/r-language
+*.[Rr][Mm][Dd]              @sassy-bulldog/r-language
+*.[Rr]                      @sassy-bulldog/r-language
+renv.lock                   @sassy-bulldog/r-language
 
 # Terraform Files
 # *.tf	@Cloud-Team/platform-reliability-engineers @Cloud-Team/solutions-engineers
