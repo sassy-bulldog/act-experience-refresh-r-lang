@@ -24,11 +24,12 @@
 # the octocats team in the octo-org organization owns all .txt files.
 # *.txt @octo-org/octocats
 
-# R Files
-*.rproj             @sassy-bulldog/r-language
-*.rmd               @sassy-bulldog/r-language
-*.r                 @sassy-bulldog/r-language
-renv.lock           @sassy-bulldog/r-language
+# R Files (note these are case sensitive)
+*.Rprofile                              @sassy-bulldog/r-language
+*.Rproj                                 @sassy-bulldog/r-language
+*.Rmd                                   @sassy-bulldog/r-language
+*.R                                     @sassy-bulldog/r-language
+renv.lock                               @sassy-bulldog/r-language
 
 # Terraform Files
 # *.tf	@Cloud-Team/platform-reliability-engineers @Cloud-Team/solutions-engineers
@@ -83,14 +84,23 @@ renv.lock           @sassy-bulldog/r-language
 # Technical Steering Committee should be in charge of reviewing any changes
 # to automations (because they should be centralized, shared, and standardized)
 # as well as changes to key governance and control files or documents
-.github/ISSUE_TEMPLATE/* @sassy-bulldog/tsc
-.github/settings.yml @sassy-bulldog/tsc
-.github/workflows/ @sassy-bulldog/tsc
-pull_request_template.md @sassy-bulldog/tsc
-CODEOWNERS @sassy-bulldog/tsc
-CONTRIBUTING.md @sassy-bulldog/tsc
-GOVERNANCE.md @sassy-bulldog/tsc
-SECURITY.md @sassy-bulldog/tsc
-SUPPORT.md @sassy-bulldog/tsc
-CODE_OF_CONDUCT.md @sassy-bulldog/tsc
-.pre-commit-config.yaml @sassy-bulldog/tsc
+.github/*                   @sassy-bulldog/tsc
+# Can all of the files below be in .github?
+.markdownlint.json          @sassy-bulldog/tsc
+.mdl_style.rb               @sassy-bulldog/tsc
+.mdlrc                      @sassy-bulldog/tsc
+.pre-commit-config.yaml     @sassy-bulldog/tsc
+CODE_OF_CONDUCT             @sassy-bulldog/tsc
+CODE_OF_CONDUCT.md          @sassy-bulldog/tsc
+CODEOWNERS                  @sassy-bulldog/tsc
+CONTRIBUTING                @sassy-bulldog/tsc
+CONTRIBUTING.md             @sassy-bulldog/tsc
+GOVERNANCE                  @sassy-bulldog/tsc
+GOVERNANCE.md               @sassy-bulldog/tsc
+LICENSE                     @sassy-bulldog/tsc
+LICENSE.txt                 @sassy-bulldog/tsc
+pull_request_template.md    @sassy-bulldog/tsc
+SECURITY                    @sassy-bulldog/tsc
+SECURITY.md                 @sassy-bulldog/tsc
+SUPPORT                     @sassy-bulldog/tsc
+SUPPORT.md                  @sassy-bulldog/tsc
