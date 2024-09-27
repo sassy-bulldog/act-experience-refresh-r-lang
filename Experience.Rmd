@@ -205,41 +205,41 @@ Prepare queried data for appending to our local SQL Database
 
 ```{r, Transform Source Data to our Data Schema}
 if (experience_env$new_data_available) {
-experience_env$df_append <- experience_env$data %>%
-  rename(
-    bordereaux_month = bordereuax_month
-  ) %>%
-  mutate(
-    tf_assumed_gross_written_premium = as.numeric(
-      gsub(",", "", tf_assumed_gross_written_premium)
-    ),
-    tf_assumed_earned_premium = as.numeric(
-      gsub(",", "", tf_assumed_earned_premium)
-    ),
-    tf_assumed_paid_losses = as.numeric(
-      gsub(",", "", tf_assumed_paid_losses)
-    ),
-    tf_assumed_expected_losses = as.numeric(
-      gsub(",", "", tf_assumed_expected_losses)
-    ),
-    tf_assumed_collected_premium = as.numeric(
-      gsub(",", "", tf_assumed_collected_premium)
-    ),
-    tf_assumed_ss = as.numeric(
-      gsub(",", "", tf_assumed_ss)
-    ),
-    tf_assumed_paid_alae = as.numeric(
-      gsub(",", "", tf_assumed_paid_alae)
-    ),
-    bordereaux_month = format(
-      as.Date(bordereaux_month, "%m/%d/%y"),
-      "%Y-%m-%d"
-    ),
-    v_created = format(
-      as.Date(v_created, "%Y-%m-%d"), "%Y-%m-%d"
-    ),
-    query_date = format(experience_env$time_end_query, "%Y-%m-%d %H:%M")
-  )
+  experience_env$df_append <- experience_env$data %>%
+    rename(
+      bordereaux_month = bordereuax_month
+    ) %>%
+    mutate(
+      tf_assumed_gross_written_premium = as.numeric(
+        gsub(",", "", tf_assumed_gross_written_premium)
+      ),
+      tf_assumed_earned_premium = as.numeric(
+        gsub(",", "", tf_assumed_earned_premium)
+      ),
+      tf_assumed_paid_losses = as.numeric(
+        gsub(",", "", tf_assumed_paid_losses)
+      ),
+      tf_assumed_expected_losses = as.numeric(
+        gsub(",", "", tf_assumed_expected_losses)
+      ),
+      tf_assumed_collected_premium = as.numeric(
+        gsub(",", "", tf_assumed_collected_premium)
+      ),
+      tf_assumed_ss = as.numeric(
+        gsub(",", "", tf_assumed_ss)
+      ),
+      tf_assumed_paid_alae = as.numeric(
+        gsub(",", "", tf_assumed_paid_alae)
+      ),
+      bordereaux_month = format(
+        as.Date(bordereaux_month, "%m/%d/%y"),
+        "%Y-%m-%d"
+      ),
+      v_created = format(
+        as.Date(v_created, "%Y-%m-%d"), "%Y-%m-%d"
+      ),
+      query_date = format(experience_env$time_end_query, "%Y-%m-%d %H:%M")
+    )
 
   head(experience_env$df_append)
 } else {
@@ -265,7 +265,7 @@ if (experience_env$new_data_available) {
       "Loading the data to local database took",
       round(
         experience_env$time_end_data_archive
-        - experience_env$time_begin_data_archive,
+          - experience_env$time_begin_data_archive,
         2
       ),
       "minutes"
@@ -320,11 +320,11 @@ experience_env$data <- experience_env$data %>%
 experience_env$check_results <- experience_env$data %>%
   group_by(nre_feed, bordereaux_month, treaty_year) %>%
   summarise(across(all_of(numeric_columns), list(
-    avg = ~mean(.),
-    stddev = ~sd(.),
-    min = ~min(.),
-    max = ~max(.),
-    count = ~n()
+    avg = ~ mean(.),
+    stddev = ~ sd(.),
+    min = ~ min(.),
+    max = ~ max(.),
+    count = ~ n()
   ), .names = "{col}_{fn}"), .groups = "drop") %>%
   filter(if_any(ends_with("_stddev"), ~ . > 1))
 
