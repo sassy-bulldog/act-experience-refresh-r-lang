@@ -4,7 +4,9 @@ title: "Refresh Experience"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 editor_options:
   chunk_output_type: console
-output: html_document
+output:
+  html_document: default
+  word_document: default
 params:
   debug: true
   server_name: ""
@@ -43,7 +45,7 @@ experience_env$time_begin <- Sys.time()
 
 Define login credentials and driver
 
-```{r, Define Databricks Connection}
+```{r, Define Database Connections}
 # Specify the path to the JDBC driver jar file
 experience_env$jdbc_driver <- JDBC(
   driverClass = "com.databricks.client.jdbc.Driver",
@@ -76,7 +78,7 @@ experience_env$db_url <- paste(
 
 Begin process of attempting connection to the Azure Databricks server. Server usually takes 5-7 minutes to initialize and return the queried data. The below function attempts connecting to the database every 2 minutes for a maximum of 5 attempts, and prints status updates during the process.
 
-```{r, Connect to Databricks}
+```{r, Connect to Databases}
 attempt_connection <- function(
     jdbc_driver,
     db_url,
@@ -99,71 +101,250 @@ attempt_connection <- function(
 }
 
 # Usage
-experience_env$time_begin_query <- Sys.time()
-experience_env$conn <- attempt_connection(
+experience_env$time_start_connection <- Sys.time()
+experience_env$db_conn <- attempt_connection(
   experience_env$jdbc_driver,
   experience_env$db_url,
   params$user_name,
   params$password
+)
+experience_env$time_end_connection <- Sys.time()
+print(
+  paste(
+    "Connection to the Source database took",
+    round(
+      experience_env$time_end_connection - experience_env$time_start_connection,
+      2
+    ),
+    "minutes"
+  )
+)
+
+experience_env$time_start_connection <- Sys.time()
+experience_env$sl_conn <- dbConnect(
+  SQLite(),
+  dbname = paste(
+    params$destination_database_path,
+    params$destination_database_name,
+    sep = ""
+  ),
+  synchronous = NULL
+)
+experience_env$time_end_connection <- Sys.time()
+print(
+  paste(
+    "Connection to the Local database took",
+    round(
+      experience_env$time_end_connection - experience_env$time_start_connection,
+      2
+    ),
+    "minutes"
+  )
+)
+```
+
+Verify the Azure Databricks source contains new data to append to our local Database
+
+```{r, Verify New Data Exists}
+# Function to get the max date from a table
+get_max_date <- function(conn, table_name) {
+  query <- paste0("SELECT MAX(v_created) FROM ", table_name)
+  as.Date(DBI::dbGetQuery(conn, query)[[1]])
+}
+
+# Get the max date from the source and destination tables
+experience_env$max_date_remote <- get_max_date(
+  experience_env$db_conn,
+  params$source_data_table_name
+)
+experience_env$max_date_local <- get_max_date(
+  experience_env$sl_conn,
+  params$destination_data_table_name
+)
+
+# If the source data is not newer than the destination data, stop the process
+experience_env$max_date_local <-
+  as.Date(experience_env$max_date_local[[1]])
+
+experience_env$new_data_available <- (
+  experience_env$max_date_local < experience_env$max_date_remote
 )
 ```
 
 Query the Experience table through the established connection
 
 ```{r, Query Source Data}
-experience_env$query <- paste0("SELECT * FROM ", params$source_data_table_name)
-experience_env$data <- dbGetQuery(experience_env$conn, experience_env$query)
-experience_env$time_end_query <- Sys.time()
-print(
-  paste(
-    "Connection to the Azure Databricks database took",
-    round(
-      experience_env$time_end_query - experience_env$time_begin_query,
-      2
-    ),
-    "minutes"
+if (experience_env$new_data_available) {
+  experience_env$time_begin_query <- Sys.time()
+  experience_env$query <- paste0(
+    "SELECT * FROM ",
+    params$source_data_table_name
   )
-)
-print(head(experience_env$data))
+  experience_env$data <- dbGetQuery(
+    experience_env$db_conn,
+    experience_env$query
+  )
+  experience_env$time_end_query <- Sys.time()
+  print(
+    paste(
+      "Loading source data took",
+      round(
+        experience_env$time_end_query - experience_env$time_begin_query,
+        2
+      ),
+      "minutes"
+    )
+  )
+  print(head(experience_env$data))
+} else {
+  print("No new data available to append.")
+}
 ```
 
 Prepare queried data for appending to our local SQL Database
 
 ```{r, Transform Source Data to our Data Schema}
+if (experience_env$new_data_available) {
 experience_env$df_append <- experience_env$data %>%
   rename(
     bordereaux_month = bordereuax_month
   ) %>%
   mutate(
-    bordereaux_month = format(as.Date(bordereaux_month, "%m/%d/%y"), "%Y-%m-%d"),
-    v_created = format(v_created, "%Y-%m-%d"),
+    tf_assumed_gross_written_premium = as.numeric(
+      gsub(",", "", tf_assumed_gross_written_premium)
+    ),
+    tf_assumed_earned_premium = as.numeric(
+      gsub(",", "", tf_assumed_earned_premium)
+    ),
+    tf_assumed_paid_losses = as.numeric(
+      gsub(",", "", tf_assumed_paid_losses)
+    ),
+    tf_assumed_expected_losses = as.numeric(
+      gsub(",", "", tf_assumed_expected_losses)
+    ),
+    tf_assumed_collected_premium = as.numeric(
+      gsub(",", "", tf_assumed_collected_premium)
+    ),
+    tf_assumed_ss = as.numeric(
+      gsub(",", "", tf_assumed_ss)
+    ),
+    tf_assumed_paid_alae = as.numeric(
+      gsub(",", "", tf_assumed_paid_alae)
+    ),
+    bordereaux_month = format(
+      as.Date(bordereaux_month, "%m/%d/%y"),
+      "%Y-%m-%d"
+    ),
+    v_created = format(
+      as.Date(v_created, "%Y-%m-%d"), "%Y-%m-%d"
+    ),
     query_date = format(experience_env$time_end_query, "%Y-%m-%d %H:%M")
   )
 
-head(experience_env$df_append)
+  head(experience_env$df_append)
+} else {
+  print("No new data available to append.")
+}
 ```
 
 Append the new data to our local SQL Database
 
-```{r, Load SQL Lite Database}
-experience_env$con <- dbConnect(
-  SQLite(),
-  dbname = paste(
-    params$destination_database_path,
-    params$destination_database_name,
-    sep = ""
+```{r, Load data into SQL Lite Database}
+if (experience_env$new_data_available) {
+  experience_env$time_begin_data_archive <- Sys.time()
+  dbWriteTable(
+    experience_env$sl_conn,
+    params$destination_data_table_name,
+    experience_env$df_append,
+    append = TRUE,
+    row.names = FALSE
+  )
+  experience_env$time_end_data_archive <- Sys.time()
+  print(
+    paste(
+      "Loading the data to local database took",
+      round(
+        experience_env$time_end_data_archive
+        - experience_env$time_begin_data_archive,
+        2
+      ),
+      "minutes"
+    )
+  )
+} else {
+  print("No new data available to append.")
+}
+```
+
+Query the data for any changes that we need to inquire about.
+This is actually being done in the overrides workbook,
+but we still do the query here to document it.
+
+```{r, Query Data for Changes}
+# Function to get numeric columns from the table
+get_numeric_columns <- function(conn, table_name) {
+  query <- paste0("PRAGMA table_info(", table_name, ");")
+  table_info <- DBI::dbGetQuery(conn, query)
+  numeric_columns <- table_info %>%
+    filter(type %in% c("REAL", "NUMERIC")) %>%
+    dplyr::pull(name)
+  return(numeric_columns)
+}
+
+# Get numeric columns from the table
+experience_env$numeric_columns <- get_numeric_columns(
+  experience_env$sl_conn,
+  params$destination_data_table_name
+)
+
+# Construct the SQL query to fetch the data
+experience_env$check_query <- paste0(
+  "SELECT nre_feed, bordereaux_month, treaty_year, ",
+  paste(numeric_columns, collapse = ", "),
+  " FROM ", params$destination_data_table_name,
+  " WHERE ", paste0(numeric_columns, " IS NOT NULL", collapse = " OR ")
+)
+
+# Execute the query and fetch the data
+experience_env$data <- dbGetQuery(
+  experience_env$sl_conn,
+  experience_env$check_query
+)
+
+# Convert columns to appropriate types
+experience_env$data <- experience_env$data %>%
+  mutate(across(all_of(numeric_columns), as.numeric)) %>%
+  mutate(bordereaux_month = as.Date(bordereaux_month))
+
+# Calculate statistics
+experience_env$check_results <- experience_env$data %>%
+  group_by(nre_feed, bordereaux_month, treaty_year) %>%
+  summarise(across(all_of(numeric_columns), list(
+    avg = ~mean(.),
+    stddev = ~sd(.),
+    min = ~min(.),
+    max = ~max(.),
+    count = ~n()
+  ), .names = "{col}_{fn}"), .groups = "drop") %>%
+  filter(if_any(ends_with("_stddev"), ~ . > 1))
+
+# Print the results
+print(experience_env$check_results)
+```
+
+Close any open connections and clean up the environment
+
+```{r, Close connections and clean up}
+# Close the connections
+dbDisconnect(experience_env$sl_conn)
+
+# Print the time taken for the entire process
+experience_env$time_end <- Sys.time()
+print(
+  paste(
+    "The entire process took",
+    round(experience_env$time_end - experience_env$time_begin, 2),
+    "minutes"
   )
 )
-
-dbWriteTable(
-  experience_env$con,
-  params$destination_data_table_name,
-  experience_env$df_append,
-  append = TRUE,
-  row.names = FALSE
-)
-
-dbDisconnect(experience_env$con)
-
-experience_env$time_end <- Sys.time()
 ```
