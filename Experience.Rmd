@@ -216,7 +216,7 @@ if (experience_env$new_data_available) {
     table_info <- DBI::dbGetQuery(conn, query)
     return(table_info$name)
   }
-  
+
   # Check if new columns exist in the source data
   experience_env$new_columns <- setdiff(
     names(experience_env$data),
