@@ -76,7 +76,7 @@ experience_env$db_url <- paste(
 )
 ```
 
-Begin process of attempting connection to the Azure Databricks server. Server usually takes 5-7 minutes to initialize and return the queried data. The below function attempts connecting to the database every 2 minutes for a maximum of 5 attempts, and prints status updates during the process.
+Begin process of attempting connection to the Remote server. Server usually takes 5-7 minutes to initialize and return the queried data. The below function attempts connecting to the database every 2 minutes for a maximum of 5 attempts, and prints status updates during the process.
 
 ```{r, Connect to Databases}
 attempt_connection <- function(
@@ -143,7 +143,7 @@ print(
 )
 ```
 
-Verify the Azure Databricks source contains new data to append to our local Database
+Verify the remote source contains new data to append to our local Database
 
 ```{r, Verify New Data Exists}
 # Function to get the max date from a table
@@ -157,12 +157,13 @@ experience_env$max_date_remote <- get_max_date(
   experience_env$db_conn,
   params$source_data_table_name
 )
+experience_env$max_date_remote <-
+  as.Date(experience_env$max_date_remote[[1]])
+
 experience_env$max_date_local <- get_max_date(
   experience_env$sl_conn,
   params$destination_data_table_name
 )
-
-# If the source data is not newer than the destination data, stop the process
 experience_env$max_date_local <-
   as.Date(experience_env$max_date_local[[1]])
 
@@ -184,6 +185,11 @@ if (experience_env$new_data_available) {
     experience_env$db_conn,
     experience_env$query
   )
+  # Fix typos in source data
+  experience_env$data <- experience_env$data %>%
+    rename(
+      bordereaux_month = bordereuax_month
+    )
   experience_env$time_end_query <- Sys.time()
   print(
     paste(
@@ -201,14 +207,46 @@ if (experience_env$new_data_available) {
 }
 ```
 
-Prepare queried data for appending to our local SQL Database
+Check for new fields added to the source database that are not present in our local database
+
+```{r, Check for New Fields}
+if (experience_env$new_data_available) {
+  get_names <- function(conn, table_name) {
+    query <- paste0("PRAGMA table_info(", table_name, ");")
+    table_info <- DBI::dbGetQuery(conn, query)
+    return(table_info$name)
+  }
+  
+  # Check if new columns exist in the source data
+  experience_env$new_columns <- setdiff(
+    names(experience_env$data),
+    get_names(experience_env$sl_conn, params$destination_data_table_name)
+  )
+
+  # If there are new columns, alter the table to add them
+  if (length(experience_env$new_columns) > 0) {
+    for (col in experience_env$new_columns) {
+      experience_env$col_type <- ifelse(is.numeric(experience_env$data[[col]]), "REAL", "TEXT")
+      experience_env$alter_query <- paste0(
+        "ALTER TABLE ",
+        params$destination_data_table_name,
+        " ADD COLUMN ",
+        col,
+        " ",
+        col_type
+      )
+      print(experience_env$alter_query)
+      dbExecute(experience_env$sl_conn, experience_env$alter_query)
+    }
+  }
+}
+```
+
+Prepare queried data for appending to our local Database
 
 ```{r, Transform Source Data to our Data Schema}
 if (experience_env$new_data_available) {
   experience_env$df_append <- experience_env$data %>%
-    rename(
-      bordereaux_month = bordereuax_month
-    ) %>%
     mutate(
       tf_assumed_gross_written_premium = as.numeric(
         gsub(",", "", tf_assumed_gross_written_premium)
@@ -230,6 +268,9 @@ if (experience_env$new_data_available) {
       ),
       tf_assumed_paid_alae = as.numeric(
         gsub(",", "", tf_assumed_paid_alae)
+      ),
+      tf_assumed_paid_ulae = as.numeric(
+        gsub(",", "", tf_assumed_paid_ulae)
       ),
       bordereaux_month = format(
         as.Date(bordereaux_month, "%m/%d/%y"),
@@ -300,9 +341,9 @@ experience_env$numeric_columns <- get_numeric_columns(
 # Construct the SQL query to fetch the data
 experience_env$check_query <- paste0(
   "SELECT nre_feed, bordereaux_month, treaty_year, ",
-  paste(numeric_columns, collapse = ", "),
+  paste(experience_env$numeric_columns, collapse = ", "),
   " FROM ", params$destination_data_table_name,
-  " WHERE ", paste0(numeric_columns, " IS NOT NULL", collapse = " OR ")
+  " WHERE ", paste0(experience_env$numeric_columns, " IS NOT NULL", collapse = " OR ")
 )
 
 # Execute the query and fetch the data
@@ -313,13 +354,13 @@ experience_env$data <- dbGetQuery(
 
 # Convert columns to appropriate types
 experience_env$data <- experience_env$data %>%
-  mutate(across(all_of(numeric_columns), as.numeric)) %>%
+  mutate(across(all_of(experience_env$numeric_columns), as.numeric)) %>%
   mutate(bordereaux_month = as.Date(bordereaux_month))
 
 # Calculate statistics
 experience_env$check_results <- experience_env$data %>%
   group_by(nre_feed, bordereaux_month, treaty_year) %>%
-  summarise(across(all_of(numeric_columns), list(
+  summarise(across(all_of(experience_env$numeric_columns), list(
     avg = ~ mean(.),
     stddev = ~ sd(.),
     min = ~ min(.),
