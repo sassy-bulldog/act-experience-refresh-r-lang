@@ -84,6 +84,7 @@ renv.lock                               @sassy-bulldog/r-language
 # Technical Steering Committee should be in charge of reviewing any changes
 # to automations (because they should be centralized, shared, and standardized)
 # as well as changes to key governance and control files or documents
+.gitignore                  @sassy-bulldog/tsc
 .github/*                   @sassy-bulldog/tsc
 # Can all of the files below be in .github?
 .markdownlint.json          @sassy-bulldog/tsc

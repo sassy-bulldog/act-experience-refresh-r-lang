@@ -743,6 +743,7 @@ cython_debug/
 ## .tfstate files
 *.tfstate
 *.tfstate.*
+*.terraform.lock.hcl
 
 ## Crash log files
 crash.log
@@ -752,6 +753,8 @@ crash.log
 ## version control.
 ##
 # example.tfvars
+# these are private variables that should not be shared
+*.private.tf
 
 ## Ignore override files as they are usually used to override resources locally and so
 ## are not checked in
