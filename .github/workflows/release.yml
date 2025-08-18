@@ -1,5 +1,7 @@
 # version: 1.0.0
-# Name as it appears on the Actions tab of GitHub (for current repo; this get's ignored if called from another repo)
+# Name as it appears on the Actions tab of GitHub
+# (for current repo; this get's ignored if called from another repo)
+---
 name: Create Release
 
 # Controls when the workflow will run
@@ -19,5 +21,6 @@ on:
 jobs:
   release:
     name: Shared Workflow
-    uses: sassy-bulldog/.github/.github/workflows/release.yml@v0.3.0 # x-release-please-version
+    # yamllint disable-line rule:line-length
+    uses: sassy-bulldog/.github/.github/workflows/release.yml@v0.3.1 # x-release-please-version
     secrets: inherit
