@@ -1,0 +1,2 @@
+# Ignore MD013 (line length) for all CHANGELOG.md files
+**/CHANGELOG.md MD013
